@@ -62,17 +62,19 @@ class ProcessConversation {
     public function checkPhoneNumbers()
     {
         $numbers = array();
+        // $pattern = '/^\d{10}/';
+        $pattern = '/(?>(\()?0\d(?(1)\))\s?+)?+\d\d\s?+(?>\d{3}\s?\d{3}|(?:\d\d\s??){3})/';
 
         foreach ($this->lcData as $data) {
             $data = $this->_replace($data, '-@w@');
             $data = str_replace(array('(', ')'), '', $data);
 
-            if (preg_match('/^\d{10}/', $data)) {
+            if (preg_match($pattern, $data)) {
                 array_push($numbers, $data);
             } else if (strlen($data) == 11) {
                 $num = substr($data, 1);
 
-                if (preg_match('/^\d{10}/', $num)) {
+                if (preg_match($pattern, $num)) {
                     array_push($numbers, $num);
                 }
             }
