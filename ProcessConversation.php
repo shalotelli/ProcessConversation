@@ -5,39 +5,39 @@ namespace ProcessConversation;
 class ProcessConversation {
 
     /**
-     * [$data description]
-     * @var [type]
+     * Raw data
+     * @var string
      */
     private $data;
 
     /**
-     * [$lcData description]
-     * @var [type]
+     * Lowercase Data
+     * @var string
      */
     private $lcData;
 
     /**
-     * [$wordCount description]
-     * @var [type]
+     * Word Count
+     * @var int
      */
     private $wordCount;
 
     /**
-     * [$linkWords description]
-     * @var [type]
+     * For link finding and third part of date
+     * @var string
      */
     private $linkWords;
 
     /**
-     * [__construct description]
-     * @param string $data [description]
+     * Constructor
+     * @param string $data Data to process
      */
     public function __construct($data = '') {
         $lcData = strtolower($data);
 
         $this->data = $data;
         $this->wordCount = count(explode(' ', $lcData));
-        $this->linkWords = preg_split('/[\s]+/', $lcData); // for link finding and third part of date
+        $this->linkWords = preg_split('/[\s]+/', $lcData);
         $this->lcData = preg_split('/[\s]+/', $lcData);
 
         for ($i=0;$i<count($this->lcData);$i++) {
@@ -47,22 +47,32 @@ class ProcessConversation {
     }
 
     /**
-     * [wordCount description]
-     * @return [type] [description]
+     * Return data word count
+     * @return int Word Count
      */
     public function wordCount()
     {
-        return $this->wordCount;
+        return (int) $this->wordCount;
     }
 
     /**
-     * [checkPhoneNumbers description]
-     * @return [type]       [description]
+     * Estimated reading time in minutes
+     * @return float Reading time (mins)
+     */
+    public function readingTime()
+    {
+        $readingSpeed = 0.312;
+
+        return (($this->wordCount() * $readingSpeed ) / 60);
+    }
+
+    /**
+     * Return array of all found phone numbers
+     * @return array Array of phone numbers
      */
     public function checkPhoneNumbers()
     {
         $numbers = array();
-        // $pattern = '/^\d{10}/';
         $pattern = '/(?>(\()?0\d(?(1)\))\s?+)?+\d\d\s?+(?>\d{3}\s?\d{3}|(?:\d\d\s??){3})/';
 
         foreach ($this->lcData as $data) {
@@ -84,15 +94,204 @@ class ProcessConversation {
     }
 
     /**
+     * Return array of all found times
+     * @return array Array of times
+     */
+    public function checkTimes()
+    {
+        $times = array();
+
+        foreach ($this->lcData as $key => $data) {
+            $testTime = explode(':', $data);
+
+            if (isset($testTime[0]) && isset($testTime[1])) {
+                if ($testTime[0] > 0 && $testTime[0] < 13) {
+                    if ($testTime[1] >= 0 && $testTime[1] < 61) {
+                        if (isset($this->lcData[$key+1]) && strtolower($this->lcData[$key+1]) === 'pm') {
+                            array_push($times, array($testTime[0], $testTime[1], "PM", $testTime[0] . ':' . $testTime[1] . "pm"));
+                        } else if (isset($this->lcData[$key+1]) && strtolower($this->lcData[$key+1]) === 'am') {
+                            array_push($times, array($testTime[0], $testTime[1], "AM", $testTime[0] . ':' . $testTime[1] . "am"));
+                        }
+                    }
+                }
+            }
+        }
+
+        return $times;
+    }
+
+    /**
+     * Count vowels in word
+     * @param  string $word Word to check
+     * @return int          Number of matches
+     */
+    public function vowelCount($word = '')
+    {
+        $search = preg_match_all('/[aeiou]/', $word, $matches);
+        return ($matches ? count($matches) : 0);
+    }
+
+    /**
+     * [consonantCount description]
+     * @param  string $word Word to check
+     * @return int          Number of matches
+     */
+    public function consonantCount($word = '')
+    {
+        $search = preg_match_all('/[bcdfghjklmnpqrstvwxyz]/', $word, $matches);
+        return ($matches ? count($matches) : 0);
+    }
+
+    /**
+     * [specialCharCount description]
+     * @param  string $word Word to check
+     * @return int          Number of matches
+     */
+    public function specialCharCount($word = '')
+    {
+        $search = preg_match_all('/[1234567890@#$%^&*();]/', $word, $matches);
+        return ($matches ? count($matches) : 0);
+    }
+
+    /**
+     * Check for spam
+     * @return boolean Is text Spam
+     */
+    public function isSpam()
+    {
+        $isSpam = false;
+        $details = '';
+
+        // average word length
+        $totalLength = 0;
+        $averageLength = 0;
+
+        // counts
+        $vowelCount = 0;
+        $consonantCount = 0;
+        $specialCharCount = 0;
+
+        // characters found
+        $foundChars = array();
+        $uniqueChars = count($foundChars);
+        $useableChars = str_split('abcdefghijklmnopqrstuvwxyz');
+
+        foreach ($this->lcData as $data) {
+            // total num characters
+            $totalLength += strlen($data);
+
+            // character counts
+            $vowelCount += $this->vowelCount($data);
+            $consonantCount += $this->consonantCount($data);
+            $specialCharCount += $this->specialCharCount($data);
+
+            foreach (str_split($data) as $char) {
+                $isThere = false;
+
+                /*$c = preg_split('/[.?! ]+/', $char);
+                $c = $c[0];
+
+                $currentLoc = 0;
+
+                while ($currentLoc < $this->wordCount() - 2) {
+                    for ($i=$currentLoc+1;$i<$this->wordCount();$i++) {
+                        $isUnuseable = true;
+
+                        foreach ($useableChars as $useableChar) {
+                            if ($c[$currentLoc] === $useableChar) {
+                                $isUnuseable = false;
+                            }
+                        }
+
+                        if (! $isUnuseable) {
+                            if ($c[$i] === $c[$currentLoc]) {
+                                if ($c[$i+1] === $c[$currentLoc+1]) {
+                                    if ($c[$i+1] === $c[$currentLoc+1]) {
+                                        $isSpam = true;
+                                    }
+                                }
+                            }
+                        } else {
+                            break;
+                        }
+
+                        $currentLoc++;
+                    }
+                }*/
+
+                // create array of found characters
+                foreach ($foundChars as $foundChar) {
+                    if ($char === $foundChar) {
+                        $isThere = true;
+                    }
+                }
+
+                if (! $isThere) {
+                    array_push($foundChars, $char);
+                }
+            }
+        }
+
+        $averageLength = ($totalLength / $this->wordCount());
+
+        // average word length check
+        if ($averageLength + 15 >= 5.1 && $averageLength - 15 <= 5.1) {
+            ;
+        } else {
+            $isSpam = true;
+            $details .= 'Average word length inconsistency... ';
+        }
+
+        if ($vowelCount > $consonantCount || $specialCharCount > $vowelCount) {
+            $isSpam = true;
+            $details .= 'More vowels than consonants or too many special characters... ';
+        }
+
+        $roughCount = ($consonantCount / 7);
+        if ($this->wordCount() > 3) {
+            if ($vowelCount + $roughCount >= ($consonantCount / 1.9) && $vowelCount - $roughCount <= ($consonantCount / 1.9)) {
+                ;
+            } else {
+                $isSpam = true;
+                $details .= 'vowels + roughcount > 2x consonants... ';
+            }
+        } else if ($this->wordCount() > 2) {
+            if ($vowelCount + $roughCount >= ($consonantCount / 1.4) && $vowelCount - $roughCount <= ($consontantCount / 1.4)) {
+                ;
+            } else {
+                $isSpam = true;
+                $details .= 'vowels + roughcount > 1.5x consonants... ';
+            }
+        } else {
+            if ($vowelCount + $roughCount >= ($consonantCount) && $vowelCount - $roughCount <= ($consontantCount)) {
+                ;
+            } else {
+                $isSpam = true;
+                $details .= 'vowels + roughcount > consonants... ';
+            }
+        }
+
+        if ($uniqueChars + ($this->wordCount() / 7) < $this->wordCount()) {
+            $isSpam = true;
+            $details .= 'Too many unique characters... ';
+        }
+
+        return array('spam' => $isSpam, 'details' => $details);
+    }
+
+    /**
      * Extract all information
-     * 
      * @return object Information object
      */
     public function extract()
     {
         $info = new \stdClass();
 
+        $info->wordCount = $this->wordCount();
+        $info->readingTime = $this->readingTime();
         $info->phoneNumbers = $this->checkPhoneNumbers();
+        $info->times = $this->checkTimes();
+        $info->isSpam = $this->isSpam();
 
         return $info;
     }
@@ -102,10 +301,8 @@ class ProcessConversation {
      *
      * Setting $caseSensitive to false will search by just consonants, instead of both consonants and vowels.
      * $useVowels can be set to false to search vowels when $caseSensitive is true
-     *
      * @example $search = $this->_search('query', 'complete string', false, false);
-     *          OUTPUT: false
-     *          
+     *          OUTPUT: false     
      * @param  string  $query         Query string
      * @param  string  $str           Search string
      * @param  boolean $caseSensitive Case Sensitive search
@@ -144,10 +341,8 @@ class ProcessConversation {
      * '@n@ is used as 'next.' It is used to seperate instructions, as follows, 'apple@w@grape@n@cherry@w@bannana'.
      * You can use '@wa@' instead of '@w@' to replace all instances of each character with another, like so, 'aeiouy@wa@#'
      * If the string were 'abcdefghijklmnopqrstuvwxyz', this would output '#bcd#fgh#jklmn#pqrst#vwx#z'.
-     *
      * @example $this->_replace('this is a test', 'this@w@that@n@is@w@was'); 
      *          OUTPUT: 'that was a test'
-     * 
      * @param  string|array $search  Search string (can be int)
      * @param  string       $replace Replace patterns
      * @return string|array          New string
