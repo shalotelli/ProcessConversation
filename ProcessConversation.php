@@ -94,6 +94,27 @@ class ProcessConversation {
     }
 
     /**
+     * Return array of all found email addresses
+     * @return array Array of emails
+     */
+    public function checkEmails()
+    {
+        $emails = array();
+        $pattern = '/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/';
+
+        foreach ($this->lcData as $data) {
+            // $data = $this->_replace($data, ',@wa@');
+            // $data = str_replace(array('(', ')', '!', ','), '', $data);
+
+            if (preg_match($pattern, $data)) {
+                array_push($emails, $data);
+            }
+        }
+        
+        return $emails;
+    }
+
+    /**
      * Return array of all found times
      * @return array Array of times
      */
@@ -290,6 +311,7 @@ class ProcessConversation {
         $info->wordCount = $this->wordCount();
         $info->readingTime = $this->readingTime();
         $info->phoneNumbers = $this->checkPhoneNumbers();
+        $info->emails = $this->checkEmails();
         $info->times = $this->checkTimes();
         $info->isSpam = $this->isSpam();
 
@@ -422,7 +444,7 @@ class ProcessConversation {
                     $pattern = $groupInfo[0];
                     $replacement = isset($groupInfo[1]) ? $groupInfo[1] : '';
 
-                    $data = preg_replace($pattern, $replacement, $data);
+                    $search = preg_replace($pattern, $replacement, $search);
                 } else {
                     $groupInfo = explode('@wa@', $group);
                     $pattern = $groupInfo[0];
