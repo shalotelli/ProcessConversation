@@ -40,8 +40,10 @@ class ProcessConversation {
         $this->linkWords = preg_split('/[\s]+/', $lcData);
         $this->lcData = preg_split('/[\s]+/', $lcData);
 
+
         for ($i=0;$i<count($this->lcData);$i++) {
-            $this->lcData[$i] = $this->_replace($this->lcData[$i], ' @w@@n@,@w@@n@"@w@');
+            $this->lcData[$i] = str_replace(array(' ', ',', '"'), '', $this->lcData[$i]);
+            // $this->lcData[$i] = $this->_replace($this->lcData[$i], ' @w@@n@,@w@@n@"@w@');
             $this->lcData[$i] = str_replace('?', '', $this->lcData[$i]);
         }
     }
@@ -103,8 +105,7 @@ class ProcessConversation {
         $pattern = '/^(?:[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+\.)*[\w\!\#\$\%\&\'\*\+\-\/\=\?\^\`\{\|\}\~]+@(?:(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!\.)){0,61}[a-zA-Z0-9]?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9\-](?!$)){0,61}[a-zA-Z0-9]?)|(?:\[(?:(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\.){3}(?:[01]?\d{1,2}|2[0-4]\d|25[0-5])\]))$/';
 
         foreach ($this->lcData as $data) {
-            // $data = $this->_replace($data, ',@wa@');
-            // $data = str_replace(array('(', ')', '!', ','), '', $data);
+            $data = str_replace(array('(', ')', '!', ','), '', $data);
 
             if (preg_match($pattern, $data)) {
                 array_push($emails, $data);
@@ -112,6 +113,29 @@ class ProcessConversation {
         }
         
         return $emails;
+    }
+
+    /**
+     * Return array of all found hyperlinks
+     * @return array Array of links
+     * 
+     * @todo Return unique
+     * @todo remove . from end of link if end of sentence
+     */
+    public function checkLinks()
+    {
+        $links = array();
+        $pattern = '/^((http:\/\/www\.)|(www\.)|(http:\/\/))[a-zA-Z0-9._-]+\.[a-zA-Z.]{2,5}$/';
+
+        foreach ($this->lcData as $data) {
+            $data = str_replace(array('(', ')', '!', ','), '', $data);
+
+            if (preg_match($pattern, $data)) {
+                array_push($links, $data);
+            }
+        }
+        
+        return $links;
     }
 
     /**
@@ -129,9 +153,9 @@ class ProcessConversation {
                 if ($testTime[0] > 0 && $testTime[0] < 13) {
                     if ($testTime[1] >= 0 && $testTime[1] < 61) {
                         if (isset($this->lcData[$key+1]) && strtolower($this->lcData[$key+1]) === 'pm') {
-                            array_push($times, array($testTime[0], $testTime[1], "PM", $testTime[0] . ':' . $testTime[1] . "pm"));
+                            array_push($times, array('hours' => $testTime[0], 'mins' => $testTime[1], 'period' => "PM", 'full' => $testTime[0] . ':' . $testTime[1] . "pm"));
                         } else if (isset($this->lcData[$key+1]) && strtolower($this->lcData[$key+1]) === 'am') {
-                            array_push($times, array($testTime[0], $testTime[1], "AM", $testTime[0] . ':' . $testTime[1] . "am"));
+                            array_push($times, array('hours' => $testTime[0], 'mins' => $testTime[1], 'period' => "AM", 'full' => $testTime[0] . ':' . $testTime[1] . "am"));
                         }
                     }
                 }
@@ -312,6 +336,7 @@ class ProcessConversation {
         $info->readingTime = $this->readingTime();
         $info->phoneNumbers = $this->checkPhoneNumbers();
         $info->emails = $this->checkEmails();
+        $info->links = $this->checkLinks();
         $info->times = $this->checkTimes();
         $info->isSpam = $this->isSpam();
 
