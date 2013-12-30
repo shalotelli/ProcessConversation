@@ -165,6 +165,63 @@ class ProcessConversation {
         return $times;
     }
 
+    public function checkDates()
+    {
+        /*
+        $dateVals['holidays'] = array(array('thanksgiving'), array('christmas'),
+                                      array('new', 'years'), array('july', '4th'));
+        $dateVals['holidaysDates'] = array(array(28, 11), array(25, 12), array(1, 1), array(4, 7));*/
+
+
+    }
+
+    public function getDay($word = '')
+    {
+        $days = array('1st', '2nd', '3rd', '4th', '5th', '6th', '7th',
+                      '8th', '9th', '10th', '11th', '12th', '13th', '14th',
+                      '15th', '16th', '17th', '18th', '19th', '20th',
+                      '21st', '22nd', '23rd',  '24th', '25th', '26th', 
+                      '27th', '28th', '29th', '30th', '31st');
+
+        if (is_numeric($word)) {
+            if ($word > 0 && $word < 32) {
+                return (int) $word;
+            }
+        } else {
+            for ($d=0;$d<count($days);$d++) {
+                if ($days[$d] === $word) {   
+                    return $d++;
+                }
+            }
+        }
+    }
+
+    public function getMonth($word = '', $type = '')
+    {
+        $months = array('january', 'february', 'march', 'april', 'may', 
+                        'june', 'july', 'august', 'september', 'october', 
+                        'november', 'december');
+
+        $monthAbbrevs = array('jan', 'feb', 'mar', 'apr', 'may', 'june', 
+                             'july', 'aug', 'sept', 'oct', 'nov', 'dec');
+
+        if (is_numeric($word) && $type === 'mdy') {
+            return (int) $word;
+        } else {
+            for ($m=0;$m<count($months);$m++) {
+                if ($months[$m] === $word) {   
+                    return $m++;
+                }
+            }
+
+            for ($m=0;$m<count($monthAbbrevs);$m++) {
+                if ($monthAbbrevs[$m] === $word) {   
+                    return $m++;
+                }
+            }
+        }
+    }
+
     /**
      * Count vowels in word
      * @param  string $word Word to check
